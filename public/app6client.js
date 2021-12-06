@@ -1,88 +1,94 @@
-let number=0;
-let number_of_books_to_load=8;
-let flag=false;
-let curren_btn_clicked="";
 
-let str=`
-<h3>Books </h3>
-    Price Sort <br/>
+let take = 8;
+let skip = 0;
+
+let loadMore1Button = document.getElementById("load_more1");
+let loadMore2Button = document.getElementById("load_more2");
+
+// Helper method for displayBooksTable
+function getTableRows(books) {
+    let tableRows = "" ;
+
+    // iterator
+    for(let book of books){ 
+        tableRows += `<tr><th>${book.title}</th><th>${book.author}</th><th>${book.price}</tr>`;
+    }
+
+    return tableRows;
+}
+
+let cacheTableRows = "" ; 
+// This functions displays table
+function displayBooksTable(books){
+
+    cacheTableRows += getTableRows(books);
+
+    const tableHTML = `<h3>Books </h3>
     <table border="1">
        <tr>
             <th>Title</th>
             <th>Author</th>
             <th>Price</th>
-        </tr>
-`;    
-function getBook(){
+       </tr>
+       ${cacheTableRows}
+    </table>` ;
 
-    if(document.getElementById("ase")){
-        console.log("ase")
-    }
-    if(document.getElementById("des")){
-        console.log("des")
-    }
+    document.getElementById("output").innerHTML = tableHTML ;
+}
 
+// Called on button click
+function getAllBooks(){
+    
     let xhr=new XMLHttpRequest();
-    xhr.open("GET","/getAllBooks",true);
+
+    xhr.open("GET",`/getAllBooks/${skip}/${take}`,true);
+    
     xhr.setRequestHeader('Content-type','application/json');
+    
+    xhr.onload=function(){
+        const json=xhr.responseText;
+
+        // JSON.parse(json) - JSON Deserialization
+        //const {books, loadMore} => Object destructuring
+        const {books, loadMore} = JSON.parse(json);
+
+        skip += take;
+
+        loadMore1Button.style= loadMore ? "visibility:visible": "visibility:hidden";
+      
+        displayBooksTable(books);
+    };
+
     xhr.send();
-    flag=true;
-    xhr.onload=function(){
-        let json=xhr.responseText;
-        let books=JSON.parse(json);  
-        for(let i=0;i<number_of_books_to_load;i++){
-            if(number>=books.length){
-                flag=false;
-                break;
-            }
-           str+="<tr><th>"+books[number].title+"</th><th>"+books[number].author+"</th><th>"+books[number].price+"</tr>" 
-           number++;
-        }
-        document.getElementById("output").innerHTML=str;
-        visible();
-        curren_btn_clicked="all";
-    }
-}
-function visible(){
-    if(flag){
-        document.getElementById("load_more").style="visibility:visible";
-    }
-    else{
-        document.getElementById("load_more").style="visibility:hidden";
-    }
-}
+
+ }
 
 
-function getBookByAuthorName(){
-    let xhr=new XMLHttpRequest();
-    xhr.open("POST","/byAuthor",true);
-    xhr.setRequestHeader('Content-type','application/json');
-    flag=true;
-    xhr.onload=function(){
-        let json=xhr.responseText;
-        let books=JSON.parse(json);  
-        for(let i=0;i<number_of_books_to_load;i++){
-            if(number>=books.length){
-                flag=false;
-                break;
-            }
-           str+="<tr><th>"+books[number].title+"</th><th>"+books[number].author+"</th><th>"+books[number].price+"</tr>" 
-           number++;
-        }        
-        document.getElementById("output").innerHTML=str;
-        visible();
-        curren_btn_clicked="author";
-    }
+
+// Here Get all Book by author name
+function getBooksbyAuthorName(){
+
     let author=document.getElementById("author_name").value;
-    let data={author:author};
-    xhr.send(JSON.stringify(data));
-}
 
-function get(){
-    if(curren_btn_clicked=="all"){
-        getBook();
+    let xhr=new XMLHttpRequest();
+
+    xhr.open("GET",`/byAuthor/${author}/${skip}/${take}`,true);
+
+    xhr.setRequestHeader('Content-type','application/json');
+
+    xhr.onload=function(){
+
+        const json=xhr.responseText;
+
+        const {books , loadMore} = JSON.parse(json);
+
+        skip+=take;
+
+        loadMore2Button.style= loadMore ? "visibility:visible" : "visibility:hidden";
+
+        displayBooksTable(books);
+
     }
-    else{
-        getBookByAuthorName();
-    }
+
+    xhr.send();
 }
