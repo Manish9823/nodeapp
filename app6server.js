@@ -39,25 +39,26 @@ let books = [
     { title: "T38", author: "A2", price: 100 }
 ];
 
+const { json } = require("body-parser");
 let express = require("express");
 let webServer = express();
 webServer.use(express.json());
 webServer.use(express.static("public")) ; // opening the folder for browser to obtain the file by sending http request to the server
 
-webServer.listen(9001);
+ webServer.listen(9001);
 
 webServer.get("/", function (request, response) {
     let str = `
             <html>
                 <body>
-                    <button onclick="getBook()">Get All Books</button>
+                    <button onclick="getAllBooks()">Get All Books</button>
                     <br/><br/>
                     Enter Author name for Book <br/>
-                    <input type="text" id="author_name"> <button onclick="getBookByAuthorName()"> Get Book </button>
+                    <input type="text" id="author_name"> <button onclick="getBooksbyAuthorName()"> Get Book </button>
                     <br/>
                     <div id="output"></div>
-                    <input type="button" value="Load More" onclick="get()" id="load_more" style="visibility:hidden">
-
+                    <input type="button" value="Load More" id="load_more1" onclick="getAllBooks()" style="visibility:hidden">
+                    <input type="button" value="Load More" id="load_more2" onclick="getBooksbyAuthorName()" style="visibility:hidden">
                 </body>
                 <script src="app6client.js"></script>
             </html>
@@ -65,17 +66,103 @@ webServer.get("/", function (request, response) {
     response.send(str);
 });
 
-webServer.get("/getAllBooks", function (request, response) {
-    response.send(JSON.stringify(books));
+
+// Route for Get All Books 
+webServer.get("/getAllBooks/:skip/:take", function (request, response) {
+    let skip=Number(request.params.skip);
+    let take=Number(request.params.take);
+
+    if ( skip > books.length ||  skip < 0 || take <= 0 ) {
+        let result = {
+            books : null,
+            loadMore : false 
+        };
+        response.json(result); // response.send ( JSON.stringify(result));
+        return ;
+    }
+    
+    let loadMore = true;
+    
+    let numberOfItemsToBeFetched=skip + take ;
+
+    if(numberOfItemsToBeFetched > books.length){
+        numberOfItemsToBeFetched = books.length;
+        loadMore = false;
+    }
+
+    // let newBooks = [] ;
+    // for(let i  = skip; i < numberOfItemsToBeFetched ; i++ ){
+    //     newBooks.push(books[i]);
+    // }
+
+    
+    let result = {
+        books : books.slice ( skip, skip + take ),
+        loadMore
+    };
+
+    response.send(JSON.stringify(result));
 });
 
-webServer.post("/byAuthor", function(request,response){
-    let data=request.body;
-    let author_book=[];
-    for(let i=0;i<books.length;i++){
-        if(books[i].author===data.author){
-            author_book.push(books[i]);
-        }
+
+
+// Route for require author book 
+
+function getBooksByAuthorLogic(books, author, skip, take) { 
+    let loadMore = true;
+
+    if ( skip > books.length ||  skip < 0 || take <= 0 ){
+        const result = {
+            books: null,
+            loadMore: false
+        };
+        return result ; 
+    } ;
+
+    let numberOfItemsToBeFetched = skip + take;
+    
+    let booksByAuthor = books.filter( function(book) { return book.author == author ; } );
+
+    if(numberOfItemsToBeFetched >= booksByAuthor.length ) {
+        loadMore = false;
     }
-    response.send(JSON.stringify(author_book));
+
+    const result={
+        books:booksByAuthor.slice ( skip, skip + take),
+        loadMore
+    } ;
+    return result ; 
+}
+
+webServer.get(`/byAuthor/:author/:skip/:take`, function(request,response){
+    
+    const author = request.params.author;
+
+    const skip = Number(request.params.skip);
+
+    const take = Number(request.params.take);
+
+    response.json(getBooksByAuthorLogic(books, author, skip, take));
 });
+
+
+// Test Cases
+// let result1 = getBooksByAuthorLogic ( [ { author : "A1" }, { author : "A1" } ], "A1", 0, 2 ) ;
+// console.log (result1.loadMore === false);
+// console.log (result1.books.length === 2);
+
+// let result2 = getBooksByAuthorLogic ( [ { author : "A1" }, { author : "A2" } ], "A1", 0, 2 ) ;
+// console.log (result2.loadMore === false);
+// console.log (result2.books.length === 1);
+
+// let result3 = getBooksByAuthorLogic ( [ { author : "A1" }, { author : "A1" }, { author : "A1" } ], "A1", 0, 2 ) ;
+// console.log (result3.loadMore === true);
+// console.log (result3.books.length === 2);
+
+// let result4 = getBooksByAuthorLogic ( [ { author : "A1" }, { author : "A1" }, { author : "A1" } ], "A1", 2, 2 ) ;
+// console.log (result4.loadMore === false);
+// console.log (result4.books.length === 1);
+
+// let result5 = getBooksByAuthorLogic ( [ { author : "A1" }, { author : "A1" }, { author : "A1" } ], "A1", -1, 2 ) ;
+// console.log (result5.loadMore === false);
+// console.log (result5.books === null);
